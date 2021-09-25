@@ -85,7 +85,7 @@ function play(guild, song, hasTimeout=false) {
 
     try {
         const dispatcher = serverQueue.connection
-            .play(ytdl(song.url))
+            .play(ytdl(song.url, { quality: 'highestaudio' }))
             .on("finish", () => {
                 songIndex[guild.id]++
                 if (config.is_loop == true && songIndex[guild.id] >= songQueue[guild.id].length) {
@@ -160,48 +160,61 @@ const connect = async (message) => {
       );
     }
 
-    const songInfo = await ytdl.getInfo(args[1]);
-    const song = {
-        title: songInfo.videoDetails.title,
-        url: songInfo.videoDetails.video_url,
-    };
-
-    if (!serverQueue) {
-        // Creating the contract for our queue
-        const queueContruct = {
-            textChannel: message.channel,
-            voiceChannel: voiceChannel,
-            connection: null,
-            songs: [],
-            volume: 5,
-            playing: true,
-        };
-        // Setting the queue using our contract
-        queue.set(message.guild.id, queueContruct);
-        // Pushing the song to our songs array
-        queueContruct.songs.push(song);
-        
-        try {
-            // Here we try to join the voicechat and save our connection into our object.
-            var connection = await voiceChannel.join();
-            queueContruct.connection = connection;
-            // Calling the play function to start a song
-            songQueue[message.guild.id] = []
-            songQueue[message.guild.id].push(queueContruct.songs[0])
-            songIndex[message.guild.id] = 0
-            play(message.guild, queueContruct.songs[0]);
-        } catch (err) {
-            // Printing the error message if the bot fails to join the voicechat
-            console.log(err);
-            songIndex[message.guild.id] = 1
-            songQueue.delete(message.guild.id)
-            queue.delete(message.guild.id);
-            return message.channel.send(err);
+    try {
+        const removedArg = args.shift()
+        if (!ytdl.validateURL(args.join(' '))) {
+            return message.channel.send("Please insert a valid youtube video's link.")
         }
-    }else {
-        songQueue[message.guild.id].push(song)
-        // serverQueue.songs.push(song);
-        return message.channel.send(`${song.title} has been added to the queue!`);
+
+        const songInfo = await ytdl.getInfo(args[0]);
+        const song = {
+            title: songInfo.videoDetails.title,
+            url: songInfo.videoDetails.video_url,
+        };
+
+        if (!serverQueue) {
+            // Creating the contract for our queue
+            const queueContruct = {
+                textChannel: message.channel,
+                voiceChannel: voiceChannel,
+                connection: null,
+                songs: [],
+                volume: 5,
+                playing: true,
+            };
+            // Setting the queue using our contract
+            queue.set(message.guild.id, queueContruct);
+            // Pushing the song to our songs array
+            queueContruct.songs.push(song);
+            
+            try {
+                // Here we try to join the voicechat and save our connection into our object.
+                var connection = await voiceChannel.join();
+                queueContruct.connection = connection;
+                // Calling the play function to start a song
+                songQueue[message.guild.id] = []
+                songQueue[message.guild.id].push(queueContruct.songs[0])
+                songIndex[message.guild.id] = 0
+                play(message.guild, queueContruct.songs[0]);
+            } catch (err) {
+                // Printing the error message if the bot fails to join the voicechat
+                console.log(err);
+                songIndex[message.guild.id] = 1
+                songQueue.delete(message.guild.id)
+                queue.delete(message.guild.id);
+                return message.channel.send(err);
+            }
+        }else {
+            songQueue[message.guild.id].push(song)
+            // serverQueue.songs.push(song);
+            return message.channel.send(`${song.title} has been added to the queue!`);
+        }
+    } catch (err) {
+        console.log(err)
+        if (!serverQueue) {
+            return message.channel.send(`Failed to play ${args[0]}, please try another song.`);
+        }
+        return message.channel.send(`Failed to add ${args[0]} to queue, please try another song.`);
     }
   }
 
