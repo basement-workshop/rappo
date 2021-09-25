@@ -85,7 +85,11 @@ function play(guild, song, hasTimeout=false) {
 
     try {
         const dispatcher = serverQueue.connection
-            .play(ytdl(song.url, { quality: 'highestaudio' }))
+            .play(ytdl(song.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1<<25
+            }))
             .on("finish", () => {
                 songIndex[guild.id]++
                 if (config.is_loop == true && songIndex[guild.id] >= songQueue[guild.id].length) {
