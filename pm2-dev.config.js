@@ -1,6 +1,6 @@
 module.exports = {
   apps : [{
-    name   : "Rappo Production",
+    name   : "Rappo Dev",
     script : "node index-dev.js"
   }]
 }
