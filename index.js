@@ -5,6 +5,7 @@ const {
 	token,
 } = require('./config.json');
 const ytdl = require('ytdl-core');
+const ytsr = require('ytsr');
 const queue = new Map();
 const config = {
     is_loop: false
@@ -190,14 +191,21 @@ const connect = async (message, serverQueue) => {
 
     try {
         const removedArg = args.shift()
+        let videoUrl = args[0]
+        
         if (!ytdl.validateURL(args.join(' '))) {
-            const embededMessage = new MessageEmbed()
-            embededMessage.setColor('#889A60')
-            embededMessage.setDescription(`Please insert a valid youtube video's link.`)
-            return message.channel.send(embededMessage)
+            const searchResults = await ytsr(args.join(' '))
+            if (searchResults.items.length <= 0) {
+                const embededMessage = new MessageEmbed()
+                embededMessage.setColor('#889A60')
+                embededMessage.setDescription(`Video not found.`)
+                return message.channel.send(embededMessage)
+            }
+
+            videoUrl = searchResults.items[0]["url"]
         }
 
-        const songInfo = await ytdl.getInfo(args[0]);
+        const songInfo = await ytdl.getInfo(videoUrl);
         const song = {
             title: songInfo.videoDetails.title,
             url: songInfo.videoDetails.video_url,
@@ -254,12 +262,12 @@ const connect = async (message, serverQueue) => {
         if (!serverQueue) {
             const embededMessage = new MessageEmbed()
             embededMessage.setColor('#889A60')
-            embededMessage.setDescription(`Failed to play ${args[0]}, please try another song.`)
+            embededMessage.setDescription(`Failed to play ${args.join(" ")}, please try another song.`)
             return message.channel.send(embededMessage);
         }
         const embededMessage = new MessageEmbed()
         embededMessage.setColor('#889A60')
-        embededMessage.setDescription(`Failed to add ${args[0]} to queue, please try another song.`)
+        embededMessage.setDescription(`Failed to add ${args.join(" ")} to queue, please try another song.`)
         return message.channel.send(embededMessage);
     }
   }
@@ -385,7 +393,6 @@ const removeQueue = (message, serverQueue) => {
         // }
         // return;
     } else if (message.content.startsWith(`${prefix}shuffle`)) {
-        console.log('e')
         const embededMessage = new MessageEmbed()
         embededMessage.setColor('#889A60')
         embededMessage.setDescription(`This command is still under development, gomen dayo`)
