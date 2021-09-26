@@ -272,20 +272,43 @@ const connect = async (message, serverQueue) => {
     }
   }
 
-const nowPlaying = (message, serverQueue) => {
-    const embededMessage = new MessageEmbed()
-    embededMessage.setColor('#889A60')
-    embededMessage.setDescription(`Now playing [${serverQueue.songs[0].title}](${serverQueue.songs[0].url}).`)
-    return message.channel.send(embededMessage);
+  const nowPlaying = (message, serverQueue) => {
+    if (!serverQueue) {
+        connect(message, serverQueue)
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`There is no track playing right now.`)
+        return message.channel.send(embededMessage)
+    }
+
+    if (serverQueue.songs.length > 1) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Now playing [${serverQueue.songs[0].title}](${serverQueue.songs[0].url}).`)
+        return message.channel.send(embededMessage)
+    } else {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`There is no track playing right now.`)
+        return message.channel.send(embededMessage)
+    }
 }
 
 const queueList = (message, serverQueue) => {
+    if (!serverQueue) {
+        connect(message, serverQueue)
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`There is no track in queue.`)
+        return message.channel.send(embededMessage)
+    }
+    
     if (serverQueue.songs.length > 1) {
         const embededMessage = new MessageEmbed()
         embededMessage.setColor('#889A60')
         embededMessage.setDescription(`Queue:`)
         serverQueue.songs.forEach((value, index) => {
-            embededMessage.addField(`${index}. [${serverQueue.songs[0].title}](${serverQueue.songs[0].url})`, 'added by [someone]')
+            embededMessage.addField(`${index}. [${value.title}](${value.url})`, `added by ${value.username}`)
         })
         return message.channel.send(embededMessage)
     } else {
