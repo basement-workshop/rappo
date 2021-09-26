@@ -84,6 +84,7 @@ function play(guild, song, hasTimeout=false) {
     }
 
     try {
+        serverQueue.textChannel.send(`Start playing: **${song.title}**`);
         const dispatcher = serverQueue.connection
             .play(ytdl(song.url, {
                 filter: 'audioonly',
@@ -105,7 +106,6 @@ function play(guild, song, hasTimeout=false) {
             })
             .on("error", error => console.error(error));
         dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
-        serverQueue.textChannel.send(`Start playing: **${song.title}**`);
     } catch (err) {
         console.log(err)
         serverQueue.textChannel.send(`Unable to play **${song.title}**, skipping the track.`);
