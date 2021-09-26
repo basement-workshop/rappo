@@ -120,15 +120,25 @@ function play(guild, song, timeoutCounter=0) {
     }
 }
 
-const connect = async (message) => {
+const connect = async (message, serverQueue) => {
+    if (serverQueue) {
+        return
+    }
+
     const voiceChannel = message.member.voice.channel;
-    if (!voiceChannel) return message.channel.send("You need to be in a voice channel to play music!")
+    if (!voiceChannel) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`You need to be in a voice channel to play music!`)
+        return message.channel.send(embededMessage)
+    }
     
     const permissions = voiceChannel.permissionsFor(message.client.user);
     if (!permissions.has("CONNECT") || !permissions.has("SPEAK")) {
-      return message.channel.send(
-        "I need the permissions to join and speak in your voice channel!"
-      );
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`I need the permissions to join and speak in your voice channel!`)
+        return message.channel.send(embededMessage)
     }
 
     // Creating the contract for our queue
@@ -148,12 +158,15 @@ const connect = async (message) => {
         var connection = await voiceChannel.join();
         queueContruct.connection = connection;
         // Calling the play function to start a song
-        play(message.guild, queueContruct.songs[0]);
+        // play(message.guild, queueContruct.songs[0]);
     } catch (err) {
         // Printing the error message if the bot fails to join the voicechat
         console.log(err);
         queue.delete(message.guild.id);
-        // return message.channel.send(err);
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Unknown error, failed to join voice chat.`)
+        return message.channel.send(embededMessage)
     }
 }
 
@@ -351,10 +364,9 @@ const removeQueue = (message, serverQueue) => {
     } else if (message.content.startsWith(`${prefix}skip`)) {
         skip(message, serverQueue);
         return;
-    // } else if (message.content.startsWith(`${prefix}join`) || message.content.startsWith(`${prefix}j`)) {
-    //     connect(message)
-    //     // stop(message, serverQueue);
-    //     return;
+    } else if (message.content.startsWith(`${prefix}join`) || message.content.startsWith(`${prefix}j`)) {
+        connect(message, serverQueue)
+        return;
     } else if (message.content.startsWith(`${prefix}disconnect`) || message.content.startsWith(`${prefix}dc` || message.content.startsWith(`${prefix}stop`) || message.content.startsWith(`${prefix}leave`))) {
         disconnect(message.guild, message)
         // stop(message, serverQueue);
@@ -394,6 +406,7 @@ const removeQueue = (message, serverQueue) => {
         message.channel.send("\nHere are the Commands dayo!: (Server Prefix: " + prefix + ") \n\n" + 
         				   "Play song / Add song to queue: \t " + prefix + "play, " + prefix + "p \n" + 
         				   "Skip the current song: \t\t " + prefix + "skip\n" + 
+                           "Connect the bot: \t\t " + prefix + "join, " + prefix + "j\n" + 
         				   "Disconnect the bot: \t\t " + prefix + "disconnect, " + prefix + "dc, " + prefix + "stop, " + prefix + "leave \n" + 
         				   "Loop the Queue / Song: \t\t " + prefix + "loop, " + prefix + "repeat \n" + 
         				   "Show current song: \t\t " + prefix + "nowplaying, " + prefix + "np \n" + 
