@@ -1,4 +1,5 @@
 const Discord = require('discord.js');
+const { MessageEmbed } = require('discord.js');
 const {
 	prefix,
 	token,
@@ -59,7 +60,7 @@ const disconnect = async (guild, message) => {
     return
 }
 
-function play(guild, song, hasTimeout=false) {
+function play(guild, song, timeoutCounter=0) {
     const serverQueue = queue.get(guild.id);
     // if (!song && hasTimeout == false) {
     //     setTimeout(() => {
@@ -77,14 +78,18 @@ function play(guild, song, hasTimeout=false) {
     // }
 
     if (!song) {
-        serverQueue.textChannel.send(`No track in queue, imma yeet myself.`);
-        serverQueue.voiceChannel.leave();
-        queue.delete(guild.id);
+        // serverQueue.textChannel.send(`No track in the queue.`);
+        // serverQueue.textChannel.send(`No track in queue, imma yeet myself.`);
+        // serverQueue.voiceChannel.leave();
+        // queue.delete(guild.id);
         return;
     }
 
     try {
-        serverQueue.textChannel.send(`Start playing: **${song.title}**`);
+        const playingEmbed = new MessageEmbed()
+        playingEmbed.setColor('#889A60')
+        playingEmbed.setDescription(`Now playing [${song.title}](${song.url}) requested by @${song.username}`)
+        serverQueue.textChannel.send(playingEmbed);
         const dispatcher = serverQueue.connection
             .play(ytdl(song.url, {
                 filter: 'audioonly',
@@ -92,15 +97,15 @@ function play(guild, song, hasTimeout=false) {
                 highWaterMark: 1<<25
             }))
             .on("finish", () => {
-                songIndex[guild.id]++
-                if (config.is_loop == true && songIndex[guild.id] >= songQueue[guild.id].length) {
-                    songIndex[guild.id] = 0
-                } 
+                // songIndex[guild.id]++
+                // if (config.is_loop == true && songIndex[guild.id] >= songQueue[guild.id].length) {
+                //     songIndex[guild.id] = 0
+                // } 
                 // else {
                 //     disconnect(guild)
                 //     return
                 // }
-                serverQueue.songs.push(songQueue[guild.id][songIndex[guild.id]])
+                // serverQueue.songs.push(songQueue[guild.id][songIndex[guild.id]])
                 serverQueue.songs.shift()
                 play(guild, serverQueue.songs[0])
             })
@@ -108,7 +113,10 @@ function play(guild, song, hasTimeout=false) {
         dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
     } catch (err) {
         console.log(err)
-        serverQueue.textChannel.send(`Unable to play **${song.title}**, skipping the track.`);
+        const playingEmbed = new MessageEmbed()
+        playingEmbed.setColor('#889A60')
+        playingEmbed.setDescription(`Unable to play [${song.title}](${song.url}), skipping the track.`)
+        serverQueue.textChannel.send(playingEmbed);
     }
 }
 
@@ -153,27 +161,34 @@ const connect = async (message) => {
     const args = message.content.split(" ");
   
     const voiceChannel = message.member.voice.channel;
-    if (!voiceChannel)
-      return message.channel.send(
-        "You need to be in a voice channel to play music!"
-      );
+    if (!voiceChannel) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`You need to be in a voice channel to play music!`)
+        return message.channel.send(embededMessage)
+    }
     const permissions = voiceChannel.permissionsFor(message.client.user);
     if (!permissions.has("CONNECT") || !permissions.has("SPEAK")) {
-      return message.channel.send(
-        "I need the permissions to join and speak in your voice channel!"
-      );
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`I need the permissions to join and speak in your voice channel!`)
+        return message.channel.send(embededMessage)
     }
 
     try {
         const removedArg = args.shift()
         if (!ytdl.validateURL(args.join(' '))) {
-            return message.channel.send("Please insert a valid youtube video's link.")
+            const embededMessage = new MessageEmbed()
+            embededMessage.setColor('#889A60')
+            embededMessage.setDescription(`Please insert a valid youtube video's link.`)
+            return message.channel.send(embededMessage)
         }
 
         const songInfo = await ytdl.getInfo(args[0]);
         const song = {
             title: songInfo.videoDetails.title,
             url: songInfo.videoDetails.video_url,
+            username: message.author.username
         };
 
         if (!serverQueue) {
@@ -196,67 +211,133 @@ const connect = async (message) => {
                 var connection = await voiceChannel.join();
                 queueContruct.connection = connection;
                 // Calling the play function to start a song
-                songQueue[message.guild.id] = []
-                songQueue[message.guild.id].push(queueContruct.songs[0])
-                songIndex[message.guild.id] = 0
+                // songQueue[message.guild.id] = []
+                // songQueue[message.guild.id].push(queueContruct.songs[0])
+                // songIndex[message.guild.id] = 0
                 play(message.guild, queueContruct.songs[0]);
             } catch (err) {
                 // Printing the error message if the bot fails to join the voicechat
                 console.log(err);
-                songIndex[message.guild.id] = 1
-                songQueue.delete(message.guild.id)
+                // songIndex[message.guild.id] = 1
+                // songQueue.delete(message.guild.id)
                 queue.delete(message.guild.id);
                 return message.channel.send(err);
             }
         }else {
-            songQueue[message.guild.id].push(song)
-            // serverQueue.songs.push(song);
-            return message.channel.send(`${song.title} has been added to the queue!`);
+            // songQueue[message.guild.id].push(song)
+            if (serverQueue.songs.length > 0) {
+                serverQueue.songs.push(song)
+                const embededMessage = new MessageEmbed()
+                embededMessage.setColor('#889A60')
+                embededMessage.setDescription(`[${song.title}](${song.url}) has been added to the queue!`)
+                return message.channel.send(embededMessage);
+            } else {
+                serverQueue.songs.push(song)
+                play(message.guild, serverQueue.songs[0])
+            }
         }
     } catch (err) {
         console.log(err)
         if (!serverQueue) {
-            return message.channel.send(`Failed to play ${args[0]}, please try another song.`);
+            const embededMessage = new MessageEmbed()
+            embededMessage.setColor('#889A60')
+            embededMessage.setDescription(`Failed to play ${args[0]}, please try another song.`)
+            return message.channel.send(embededMessage);
         }
-        return message.channel.send(`Failed to add ${args[0]} to queue, please try another song.`);
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Failed to add ${args[0]} to queue, please try another song.`)
+        return message.channel.send(embededMessage);
     }
   }
 
 const nowPlaying = (message, serverQueue) => {
-    return message.channel.send(`now playing ${serverQueue.songs[songIndex[message.guild.id]].title}.`);
+    const embededMessage = new MessageEmbed()
+    embededMessage.setColor('#889A60')
+    embededMessage.setDescription(`Now playing [${serverQueue.songs[0].title}](${serverQueue.songs[0].url}).`)
+    return message.channel.send(embededMessage);
 }
 
 const queueList = (message, serverQueue) => {
-    return message.channel.send(`queue:\n${songQueue[message.guild.id].map((value, index) => `${index}. ${value.title} ${ songIndex[message.guild.id] == index ? '(now playing)' : '' }`).join('\n')}`);
+    if (serverQueue.songs.length > 1) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Queue:`)
+        serverQueue.songs.forEach((value, index) => {
+            embededMessage.addField(`${index}. [${serverQueue.songs[0].title}](${serverQueue.songs[0].url})`, 'added by [someone]')
+        })
+        return message.channel.send(embededMessage)
+    } else {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`There is no track in queue.`)
+        return message.channel.send(embededMessage)
+    }
+    // return message.channel.send(`queue:\n${songQueue[message.guild.id].map((value, index) => `${index}. ${value.title} ${ songIndex[message.guild.id] == index ? '(now playing)' : '' }`).join('\n')}`);
+}
+
+const clearQueue = (message, serverQueue) => {
+    // songIndex[message.guild.id] = -1
+    // songQueue[message.guild.id] = []
+    serverQueue.songs = []
+    const embededMessage = new MessageEmbed()
+    embededMessage.setColor('#889A60')
+    embededMessage.setDescription(`Queue has been cleared out.`)
+    return message.channel.send(embededMessage);
 }
 
 const skip = (message, serverQueue) => {
-    if (!message.member.voice.channel) return message.channel.send("You have to be in a voice channel to stop the music!");
-    if (!serverQueue) return message.channel.send("There is no song that I could skip!");
-
-    songIndex[message.guild.id]++
-
-    if (serverQueue.songs.length <= 1) {
-        if (songIndex[message.guild.id] >= songQueue[message.guild.id].length && config.is_loop == true) {
-            songIndex[message.guild.id] = 0
-            console.log(songQueue[message.guild.id])
-            console.log(songQueue[message.guild.id][songIndex[message.guild.id]])
-            serverQueue.songs.push(songQueue[message.guild.id][songIndex[message.guild.id]])
-        }
+    if (!message.member.voice.channel) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`You have to be in a voice channel to stop the music!`)
+        return message.channel.send(embededMessage);
     }
+    if (!serverQueue) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`There is no song that I could skip!`)
+        return message.channel.send(embededMessage)
+    }
+
+    // songIndex[message.guild.id]++
+
+    // if (serverQueue.songs.length <= 1) {
+    //     if (songIndex[message.guild.id] >= songQueue[message.guild.id].length && config.is_loop == true) {
+    //         songIndex[message.guild.id] = 0
+    //         console.log(songQueue[message.guild.id])
+    //         console.log(songQueue[message.guild.id][songIndex[message.guild.id]])
+    //         serverQueue.songs.push(songQueue[message.guild.id][songIndex[message.guild.id]])
+    //     }
+    // }
     
     serverQueue.songs.shift()
     play(message.guild, serverQueue.songs[0]);
 }
 
 const removeQueue = (message, serverQueue) => {
-    if (!message.member.voice.channel) return message.channel.send("You have to be in a voice channel to remove the music!");
+    if (!message.member.voice.channel) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`You have to be in a voice channel to remove the music!`)
+        return message.channel.send(embededMessage)
+    }
     const args = message.content.split(" ");
-    if (+args[1] == songIndex[message.guild.id]) return message.channel.send("Unable to remove a playing music, please use skip command");
-    if (+args[1] > songQueue[message.guild.id].length) return message.channel.send("Music not found, please check again using queue command");
+    if (!serverQueue.songs[+args[1]]) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Unable to remove music: music with index of ${args[1]} is not found.`)
+        return message.channel.send(embededMessage)
+    }
+    // if (+args[1] == songIndex[message.guild.id]) return message.channel.send("Unable to remove a playing music, please use skip command");
+    // if (+args[1] > songQueue[message.guild.id].length) return message.channel.send("Music not found, please check again using queue command");
 
-    songQueue[message.guild.id].splice(+args[1], 1)
-    return message.channel.send("The selected music has been deleted");
+    // songQueue[message.guild.id].splice(+args[1], 1)
+    serverQueue.songs.splice(+args[1], 1)
+    const embededMessage = new MessageEmbed()
+    embededMessage.setColor('#889A60')
+    embededMessage.setDescription(`The selected music has been deleted`)
+    return message.channel.send(embededMessage)
 }
 
  client.on('message', async message => {
@@ -264,15 +345,10 @@ const removeQueue = (message, serverQueue) => {
     if (!message.content.startsWith(prefix)) return;
 
     const serverQueue = queue.get(message.guild.id);
-    // queue / list, done
-    // nowplaying / np, done
-    // remove song index, done
-    // repeat / loop, done
     if (message.content.startsWith(`${prefix}play`) || message.content.startsWith(`${prefix}p`)) {
-        // message.channel.send("play command!");
         execute(message, serverQueue);
         return;
-    } else if (message.content.startsWith(`${prefix}skip`) || message.content.startsWith(`${prefix}s`)) {
+    } else if (message.content.startsWith(`${prefix}skip`)) {
         skip(message, serverQueue);
         return;
     // } else if (message.content.startsWith(`${prefix}join`) || message.content.startsWith(`${prefix}j`)) {
@@ -285,34 +361,46 @@ const removeQueue = (message, serverQueue) => {
         return;
     } else if (message.content.startsWith(`${prefix}loop`) || message.content.startsWith(`${prefix}repeat`)) {
         // message.channel.send("play command!");
-        config.is_loop = !config.is_loop
-        if (config.is_loop == true) {
-            message.channel.send("Looping has been enabled");
-        } else {
-            message.channel.send("Looping has been disabled");
-        }
-        return;
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`This command is still under development, gomen dayo`)
+        return message.channel.send(embededMessage)
+        // config.is_loop = !config.is_loop
+        // if (config.is_loop == true) {
+        //     message.channel.send("Looping has been enabled");
+        // } else {
+        //     message.channel.send("Looping has been disabled");
+        // }
+        // return;
+    } else if (message.content.startsWith(`${prefix}shuffle`)) {
+        console.log('e')
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`This command is still under development, gomen dayo`)
+        return message.channel.send(embededMessage)
     } else if (message.content.startsWith(`${prefix}nowplaying`) || message.content.startsWith(`${prefix}np`)) {
         nowPlaying(message, serverQueue)
         return; 
     } else if (message.content.startsWith(`${prefix}queue`) || message.content.startsWith(`${prefix}list`) || message.content.startsWith(`${prefix}q`)) {
         queueList(message, serverQueue)
         return; 
-    } else if (message.content.startsWith(`${prefix}remove`) || message.content.startsWith(`${prefix}rm`)) {
+    } else if (message.content.startsWith(`${prefix}clearqueue`) || message.content.startsWith(`${prefix}clear`) || message.content.startsWith(`${prefix}cq`)) {
+        clearQueue(message, serverQueue)
+        return; 
+    } else if (message.content.startsWith(`${prefix}remove`) || message.content.startsWith(`${prefix}r`)) {
         removeQueue(message, serverQueue)
         return; 
-    } else if (message.content.startsWith(`${prefix}Help`) || message.content.startsWith(`${prefix}Help`) || message.content.startsWith(`${prefix}h`)) 
-	{
+    } else if (message.content.startsWith(`${prefix}Help`) || message.content.startsWith(`${prefix}Help`) || message.content.startsWith(`${prefix}h`)) {
         message.channel.send("\nHere are the Commands dayo!: (Server Prefix: " + prefix + ") \n\n" + 
         				   "Play song / Add song to queue: \t " + prefix + "play, " + prefix + "p \n" + 
-        				   "Skip the current song: \t\t " + prefix + "skip, " + prefix + "s \n" + 
+        				   "Skip the current song: \t\t " + prefix + "skip\n" + 
         				   "Disconnect the bot: \t\t " + prefix + "disconnect, " + prefix + "dc, " + prefix + "stop, " + prefix + "leave \n" + 
         				   "Loop the Queue / Song: \t\t " + prefix + "loop, " + prefix + "repeat \n" + 
         				   "Show current song: \t\t " + prefix + "nowplaying, " + prefix + "np \n" + 
         				   "Show entire queue: \t\t " + prefix + "queue, " + prefix + "q, " + prefix + "list \n" + 
         				   "Remove song from queue: \t " + prefix + "remove [Number in queue], " + prefix + "r [Number in queue] \n" + 
         				   "Clear the queue: \t\t " + prefix + "clearqueue, " + prefix + "cq \n" + 
-        				   "Shuffle the queue: \t\t " + prefix + "shuffle, " + prefix + "s \n" + 
+        				   "Shuffle the queue: \t\t " + prefix + "shuffle\n" + 
         				   "\n\nkekw");
         return;
     } else {
