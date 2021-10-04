@@ -6,6 +6,7 @@ const {
 } = require('./config.json');
 const ytdl = require('ytdl-core');
 const ytsr = require('ytsr');
+const ytpl = require('ytpl');
 const queue = new Map();
 const config = {
     is_loop: false
@@ -192,25 +193,40 @@ const connect = async (message, serverQueue) => {
     try {
         const removedArg = args.shift()
         let videoUrl = args[0]
-        
+        const songs = []
         if (!ytdl.validateURL(args.join(' '))) {
-            const searchResults = await ytsr(args.join(' '))
-            if (searchResults.items.length <= 0) {
-                const embededMessage = new MessageEmbed()
-                embededMessage.setColor('#889A60')
-                embededMessage.setDescription(`Video not found.`)
-                return message.channel.send(embededMessage)
-            }
+            if (args.length > 1) {
+                // search
+                const searchResults = await ytsr(args.join(' '))
+                if (searchResults.items.length <= 0) {
+                    const embededMessage = new MessageEmbed()
+                    embededMessage.setColor('#889A60')
+                    embededMessage.setDescription(`Video not found.`)
+                    return message.channel.send(embededMessage)
+                }
 
-            videoUrl = searchResults.items[0]["url"]
+                videoUrl = searchResults.items[0]["url"]
+            } else {
+                // playlist
+                const playlist = await ytpl(args[0])
+                playlist.items.forEach(item => {
+                    songs.push({
+                        title: item.title,
+                        url: item.shortUrl,
+                        username: message.author.username
+                    })
+                })
+            }
         }
 
-        const songInfo = await ytdl.getInfo(videoUrl);
-        const song = {
-            title: songInfo.videoDetails.title,
-            url: songInfo.videoDetails.video_url,
-            username: message.author.username
-        };
+        if (songs.length <= 0) {
+            const songInfo = await ytdl.getInfo(videoUrl);
+            songs[0] = {
+                title: songInfo.videoDetails.title,
+                url: songInfo.videoDetails.video_url,
+                username: message.author.username
+            };
+        }
 
         if (!serverQueue) {
             // Creating the contract for our queue
@@ -225,7 +241,7 @@ const connect = async (message, serverQueue) => {
             // Setting the queue using our contract
             queue.set(message.guild.id, queueContruct);
             // Pushing the song to our songs array
-            queueContruct.songs.push(song);
+            queueContruct.songs = songs;
             
             try {
                 // Here we try to join the voicechat and save our connection into our object.
@@ -247,13 +263,13 @@ const connect = async (message, serverQueue) => {
         }else {
             // songQueue[message.guild.id].push(song)
             if (serverQueue.songs.length > 0) {
-                serverQueue.songs.push(song)
+                serverQueue.songs.push(songs)
                 const embededMessage = new MessageEmbed()
                 embededMessage.setColor('#889A60')
-                embededMessage.setDescription(`[${song.title}](${song.url}) has been added to the queue!`)
+                embededMessage.setDescription(`[${songs[0].title}](${songs[0].url}) has been added to the queue!`)
                 return message.channel.send(embededMessage);
             } else {
-                serverQueue.songs.push(song)
+                serverQueue.songs.push(songs)
                 play(message.guild, serverQueue.songs[0])
             }
         }
