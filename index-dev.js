@@ -311,29 +311,38 @@ const connect = async (message, serverQueue) => {
 }
 
 const queueList = (message, serverQueue) => {
-    if (!serverQueue) {
-        connect(message, serverQueue)
-        const embededMessage = new MessageEmbed()
-        embededMessage.setColor('#889A60')
-        embededMessage.setDescription(`There is no track in queue.`)
-        return message.channel.send(embededMessage)
+    try {
+        if (!serverQueue) {
+            connect(message, serverQueue)
+            const embededMessage = new MessageEmbed()
+            embededMessage.setColor('#889A60')
+            embededMessage.setDescription(`There is no track in queue.`)
+            return message.channel.send(embededMessage)
+        }
+        
+        if (serverQueue.songs.length > 1) {
+            const embededMessage = new MessageEmbed()
+            embededMessage.setColor('#889A60')
+            embededMessage.setDescription(`Queue:`)
+            const songs = serverQueue.songs.slice(0,4)
+
+            songs.forEach((value, index) => {
+                embededMessage.addField(`${index}. [${value.title}](${value.url})`, `added by ${value.username}`)
+            })
+            if (serverQueue.songs.length > 5) {
+                embededMessage.addField(`Songs in queue`, `and other ${+serverQueue.songs.length - 5} songs`)
+            }
+            return message.channel.send(embededMessage)
+        } else {
+            const embededMessage = new MessageEmbed()
+            embededMessage.setColor('#889A60')
+            embededMessage.setDescription(`There is no track in queue.`)
+            return message.channel.send(embededMessage)
+        }
+        // return message.channel.send(`queue:\n${songQueue[message.guild.id].map((value, index) => `${index}. ${value.title} ${ songIndex[message.guild.id] == index ? '(now playing)' : '' }`).join('\n')}`);
+    } catch (err) {
+        console.log(err)
     }
-    
-    if (serverQueue.songs.length > 1) {
-        const embededMessage = new MessageEmbed()
-        embededMessage.setColor('#889A60')
-        embededMessage.setDescription(`Queue:`)
-        serverQueue.songs.forEach((value, index) => {
-            embededMessage.addField(`${index}. [${value.title}](${value.url})`, `added by ${value.username}`)
-        })
-        return message.channel.send(embededMessage)
-    } else {
-        const embededMessage = new MessageEmbed()
-        embededMessage.setColor('#889A60')
-        embededMessage.setDescription(`There is no track in queue.`)
-        return message.channel.send(embededMessage)
-    }
-    // return message.channel.send(`queue:\n${songQueue[message.guild.id].map((value, index) => `${index}. ${value.title} ${ songIndex[message.guild.id] == index ? '(now playing)' : '' }`).join('\n')}`);
 }
 
 const clearQueue = (message, serverQueue) => {
