@@ -324,7 +324,7 @@ const queueList = (message, serverQueue) => {
             const embededMessage = new MessageEmbed()
             embededMessage.setColor('#889A60')
             embededMessage.setDescription(`Queue:`)
-            const songs = serverQueue.songs.slice(0,4)
+            const songs = serverQueue.songs.slice(0,5)
 
             songs.forEach((value, index) => {
                 embededMessage.addField(`${index}. [${value.title}](${value.url})`, `added by ${value.username}`)
