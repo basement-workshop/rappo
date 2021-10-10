@@ -263,13 +263,13 @@ const connect = async (message, serverQueue) => {
         }else {
             // songQueue[message.guild.id].push(song)
             if (serverQueue.songs.length > 0) {
-                serverQueue.songs.push(songs)
+                serverQueue.songs = serverQueue.songs.concat(songs)
                 const embededMessage = new MessageEmbed()
                 embededMessage.setColor('#889A60')
                 embededMessage.setDescription(`[${songs[0].title}](${songs[0].url}) has been added to the queue!`)
                 return message.channel.send(embededMessage);
             } else {
-                serverQueue.songs.push(songs)
+                serverQueue.songs = serverQueue.songs.concat(songs)
                 play(message.guild, serverQueue.songs[0])
             }
         }
