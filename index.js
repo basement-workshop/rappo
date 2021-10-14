@@ -108,7 +108,9 @@ function play(guild, song, timeoutCounter=0) {
                 //     return
                 // }
                 // serverQueue.songs.push(songQueue[guild.id][songIndex[guild.id]])
-                serverQueue.songs.shift()
+                if (serverQueue.loop == null) {
+                    serverQueue.songs.shift()
+                }
                 play(guild, serverQueue.songs[0])
             })
             .on("error", error => console.error(error));
@@ -237,6 +239,7 @@ const connect = async (message, serverQueue) => {
                 songs: [],
                 volume: 5,
                 playing: true,
+                loop: null
             };
             // Setting the queue using our contract
             queue.set(message.guild.id, queueContruct);
@@ -409,6 +412,29 @@ const removeQueue = (message, serverQueue) => {
     return message.channel.send(embededMessage)
 }
 
+const loopSong = (message, serverQueue) => {
+    if (!message.member.voice.channel) {
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`You have to be in a voice channel to remove the music!`)
+        return message.channel.send(embededMessage)
+    }
+
+    if (serverQueue.loop == 'song') {
+        serverQueue.loop = null
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Loop for current song has been deactivated`)
+        return message.channel.send(embededMessage)
+    } else if (serverQueue.loop == null) {
+        serverQueue.loop = 'song'
+        const embededMessage = new MessageEmbed()
+        embededMessage.setColor('#889A60')
+        embededMessage.setDescription(`Loop for current song has been activated`)
+        return message.channel.send(embededMessage)
+    }
+}
+
  client.on('message', async message => {
     if (message.author.bot) return;
     if (!message.content.startsWith(prefix)) return;
@@ -428,18 +454,20 @@ const removeQueue = (message, serverQueue) => {
         // stop(message, serverQueue);
         return;
     } else if (message.content.startsWith(`${prefix}loop`) || message.content.startsWith(`${prefix}repeat`)) {
-        // message.channel.send("play command!");
-        const embededMessage = new MessageEmbed()
-        embededMessage.setColor('#889A60')
-        embededMessage.setDescription(`This command is still under development, gomen dayo`)
-        return message.channel.send(embededMessage)
-        // config.is_loop = !config.is_loop
-        // if (config.is_loop == true) {
-        //     message.channel.send("Looping has been enabled");
-        // } else {
-        //     message.channel.send("Looping has been disabled");
-        // }
-        // return;
+        loopSong(message, serverQueue)
+        return
+        // // message.channel.send("play command!");
+        // const embededMessage = new MessageEmbed()
+        // embededMessage.setColor('#889A60')
+        // embededMessage.setDescription(`This command is still under development, gomen dayo`)
+        // return message.channel.send(embededMessage)
+        // // config.is_loop = !config.is_loop
+        // // if (config.is_loop == true) {
+        // //     message.channel.send("Looping has been enabled");
+        // // } else {
+        // //     message.channel.send("Looping has been disabled");
+        // // }
+        // // return;
     } else if (message.content.startsWith(`${prefix}shuffle`)) {
         const embededMessage = new MessageEmbed()
         embededMessage.setColor('#889A60')
