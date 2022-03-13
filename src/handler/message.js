@@ -1,4 +1,4 @@
-let { prefix, app_id } = require('../../config-dev.json');
+let { prefix, app_id } = require('../../config.json');
 const { helpHandler, mentionedHandler } = require('./help')
 const { executeHandler, skipHandler, loopHandler, shuffleHandler, nowPlayingHandler, queueListHandler, clearQueueHandler, removeQueueHandler } = require('./music')
 const { disconnectHandler, connectHandler } = require('./common')

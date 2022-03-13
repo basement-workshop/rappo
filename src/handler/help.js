@@ -1,4 +1,4 @@
-let { prefix } = require('../../config-dev.json');
+let { prefix } = require('../../config.json');
 
 const helpHandler = (message) => {
     message.channel.send("\nHere are the Commands dayo!: (Server Prefix: " + prefix + ") \n\n" + 
